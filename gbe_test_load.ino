@@ -3,7 +3,7 @@
 #define ROWS 4
 #define COLS 4
 
-#include "LittleFS.h"
+//#include "LittleFS.h"
 #include "emu.h"
 #include "cart.h"
 #include "cpu.h"
@@ -80,14 +80,12 @@ void cpu_run() {
  
 
 
-
-
 void setup() {
   
   Serial.begin(115200);
   cas1 = cas2 = 0;
   
-  if(!LittleFS.begin()){
+  /*if(!LittleFS.begin()){
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
@@ -96,50 +94,39 @@ void setup() {
   if(!file){
     Serial.println("Failed to open file for reading");
     return;
-  }
+  }*/ 
 
-  /*File output = LittleFS.open("/output.txt", FILE_APPEND);  
-  if(!output){
-    Serial.println("Failed to open output");
-    return;
-  }*/
-
-  Serial.println(" velikost souboru v bytech: ");
+  /*Serial.println(" velikost souboru v bytech: ");
   int velikost = file.size();
   Serial.println(velikost);
   uint8_t* rom_buff = (uint8_t*)malloc(velikost * sizeof(uint8_t));
   int n_bytes = file.read(rom_buff, velikost);
-
-
-  
   file.close();
-  Serial.println(n_bytes);
+  Serial.println(n_bytes);*/
   
 //************************************************************
   const char *files[] = {
         "rezerva",
-        "tetris.gb"
+        "Alien3.gb"
   };
 
-  if(cart_load(files[1], rom_buff, n_bytes)){
-      Serial.println("ok");
-  }
-
-  uint8_t *ram[16];
-  for(uint8_t i = 0; i < 16; i++){
-    ram[i] = (uint8_t*)malloc(0x2000 * sizeof(uint8_t));
-    Serial.println(*ram[i]);
-  }
+  char buff[10];
   
+  Serial.println(cart_load(files[1], buff));
+  
+  Serial.println(buff);
+
   ui_init();
   timer_init();
   cpu_init();
   ppu_init();
+ 
 
+  
+  
   cpu_run();
 
   //queue_h = xQueueCreate(10, sizeof(uint8_t));
-
   //xTaskCreate(cpu_run,"cpu_run",2048,NULL ,1, NULL);
   //xTaskCreate(emu_cycles,"emu_cycles",2048,NULL ,8, NULL);    
   
@@ -150,9 +137,6 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 }
-
-
-
 
 
 void button_check(){

@@ -65,7 +65,7 @@ void update_dbg_window(char *buf) {
         display_tile(buf, addr, tileNum, xDraw + x, yDraw + y);
         xDraw += 8;
         x++;
-        if(i % 16 == 0){
+        if(i % 10 == 0 && i != 0){
             yDraw += 8;
             xDraw = 0;
             y++;

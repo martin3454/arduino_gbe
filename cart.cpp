@@ -1,13 +1,51 @@
 #include "cart.h"
+#include "LittleFS.h"
+
+
 
 typedef struct {
     char filename[1024];
     u32 rom_size;
     u8 *rom_data;
+    u8 *rom_data_pool[10];        //
     rom_header *header;
+
+    //mbc1 related data
+    bool ram_enabled;
+    bool ram_banking;
+
+    u8 *rom_bank_x;
+    u8 banking_mode;
+
+    u8 rom_bank_value;
+    u8 ram_bank_value;
+
+    u8 *ram_bank; //current selected ram bank
+    u8 *ram_banks[16]; //all ram banks
+
+    //for battery
+    bool battery; //has battery
+    bool need_save; //should save battery backup.
 } cart_context;
 
 static cart_context ctx;
+
+u8* get_rom_data(uint8_t i){
+  return ctx.rom_data_pool[i];
+}
+
+bool cart_need_save() {
+    return ctx.need_save;
+}
+
+bool cart_mbc1() {
+    return BETWEEN(ctx.header->type, 1, 3);
+}
+
+bool cart_battery() {
+    //mbc1 only for now...
+    return ctx.header->type == 3;
+}
 
 static const char* ROM_TYPES[] = {
     "ROM ONLY",
@@ -49,7 +87,7 @@ static const char* ROM_TYPES[] = {
 
 
 static const char* LIC_CODE[0xA5] = {
-    [0x00] = "None",
+[0x00] = "None",
 [0x01] = "Nintendo R&D1",
 [0x02] = "UNKNOWN",
 [0x03] = "UNKNOWN",
@@ -230,31 +268,213 @@ const char* cart_type_name() {
     return "UNKNOWN";
 }
 
-bool cart_load(const char *cart, uint8_t *rom_buff, int n_bytes) {
-    
-    snprintf(ctx.filename, sizeof(ctx.filename), "%s", cart);               
-    ctx.rom_data = (u8*)malloc(n_bytes * sizeof(u8));
-    memcpy(ctx.rom_data, rom_buff, n_bytes);
-    free(rom_buff);
-   
-    ctx.header = (rom_header *)(ctx.rom_data + 0x100);
-    ctx.header->title[15] = 0;
+bool cart_setup_banking() {
+    for (int i=0; i<16; i++) {
+        ctx.ram_banks[i] = 0;
 
-    u16 x = 0;
-    for (u16 i=0x0134; i<=0x014C; i++) {
-        x = x - ctx.rom_data[i] - 1;
+        if ((ctx.header->ram_size == 2 && i == 0) ||
+            (ctx.header->ram_size == 3 && i < 4) || 
+            (ctx.header->ram_size == 4 && i < 16) || 
+            (ctx.header->ram_size == 5 && i < 8)) {
+            ctx.ram_banks[i] = (u8*)malloc(0x2000 * sizeof(uint8_t));
+            if(!ctx.ram_banks[i]) return false;
+            memset(ctx.ram_banks[i], 0, 0x2000);
+        }
     }
+
+    ctx.ram_bank = ctx.ram_banks[0];
+    //ctx.rom_bank_x = ctx.rom_data + 0x4000; //rom bank 1
+    ctx.rom_bank_x = ctx.rom_data_pool[0] + 0x4000; //rom bank 1
     return true;
 }
 
-u8 cart_read(u16 address) {
-    //for now just ROM ONLY type supported...
+int8_t cart_load(const char *cart, char* buff) {
 
-    return ctx.rom_data[address];
+    snprintf(ctx.filename, sizeof(ctx.filename), "%s", cart);               
+    
+    if(!LittleFS.begin()){      
+      return 0;
+    }
+
+    File rom_file = LittleFS.open("/Alien3.gb");
+    
+    if(!rom_file){   
+      return -1;
+    }
+
+    uint32_t velikost_rom = rom_file.size();
+    uint8_t n = velikost_rom / 0x8000;      //
+    if(n > 9) return -2;
+    
+    uint8_t zbytek = velikost_rom % 0x8000;
+    
+    if(n < 1){
+      ctx.rom_data_pool[0] = (uint8_t*)malloc(velikost_rom * sizeof(uint8_t));        
+      rom_file.read(ctx.rom_data_pool[0], velikost_rom);
+    }else{
+      for(uint8_t i = 0; i < n; i++){
+        ctx.rom_data_pool[i] = (uint8_t*)malloc(0x8000 * sizeof(uint8_t));        
+        if(!ctx.rom_data_pool[i]) return -3;        
+        rom_file.read(ctx.rom_data_pool[i], 0x8000);
+      }
+        if(zbytek > 0){
+          ctx.rom_data_pool[n] = (uint8_t*)malloc(zbytek * sizeof(uint8_t));
+          if(!ctx.rom_data_pool[n]) return -4;        
+          rom_file.read(ctx.rom_data_pool[n], zbytek);  
+        }        
+    }
+
+    sprintf(buff, "%02x", ctx.rom_data_pool[0][0]);
+           
+    //ctx.rom_data = (u8*)malloc(velikost_rom * sizeof(u8));      
+    //rom_file.read(ctx.rom_data, velikost_rom);
+    rom_file.close();             
+                    
+    ctx.header = (rom_header *)(ctx.rom_data_pool[0] + 0x100);
+    ctx.header->title[15] = 0;
+    ctx.battery = cart_battery();
+    ctx.need_save = false;
+
+    if(!cart_setup_banking()) return -5;
+    
+    u16 x = 0;
+    for (u16 i=0x0134; i<=0x014C; i++) {
+        //x = x - ctx.rom_data[i] - 1;
+        x = x - ctx.rom_data_pool[0][i] - 1;
+    }
+
+    if(ctx.battery) {
+       cart_battery_load();
+    }
+    return 1;
+}
+
+
+void cart_battery_load() {
+    if (!ctx.ram_bank) {
+        return;
+    }
+    char fn[1048];
+    sprintf(fn, "/%s.battery", ctx.filename);
+    const char* f = fn;
+   
+    File load_file = LittleFS.open(f, FILE_READ, true);
+    if(!load_file){
+      //Serial.println("Failed to open file for load");
+      return;
+    }
+    load_file.read(ctx.ram_bank, 0x2000);
+    load_file.close();
+  
+    return;    
+}
+
+void cart_battery_save() {
+    if (!ctx.ram_bank) {
+        return;
+    }
+    char fn[1048];
+    sprintf(fn, "/%s.battery", ctx.filename);
+    const char* f = fn;
+   
+    File save_file = LittleFS.open(f, FILE_WRITE, true);
+    if(!save_file){
+      //Serial.println("Failed to open file for load");
+      return;
+    }
+    //const uint8_t* ptr = (const uint8_t*)cart_get_context()->ram_bank;
+    save_file.write(ctx.ram_bank, 0x2000);
+    save_file.close();
+  
+    return;    
+}
+
+
+u8 cart_read(u16 address) {
+    if (!cart_mbc1() || address < 0x4000) {
+        //return ctx.rom_data[address];        
+        return ctx.rom_data_pool[0][address];        
+    }
+
+    if ((address & 0xE000) == 0xA000) {
+        if (!ctx.ram_enabled) {
+            return 0xFF;
+        }
+
+        if (!ctx.ram_bank) {
+            return 0xFF;
+        }
+        return ctx.ram_bank[address - 0xA000];        
+    }    
+    return ctx.rom_bank_x[address - 0x4000];
 }
 
 void cart_write(u16 address, u8 value) {
-    //for now, ROM ONLY...
+    if (!cart_mbc1()) {
+        return;
+    }
 
-    //NO_IMPL
+    if (address < 0x2000) {
+        ctx.ram_enabled = ((value & 0xF) == 0xA);
+    }
+
+    if ((address & 0xE000) == 0x2000) {
+        //rom bank number
+        if (value == 0) {
+            value = 1;
+        }
+
+        value &= 0b11111;
+
+        ctx.rom_bank_value = value;
+        //ctx.rom_bank_x = ctx.rom_data + (0x4000 * ctx.rom_bank_value);        
+        u32 rom_offset = 0x4000 * ctx.rom_bank_value;       
+        u8 rom_pool_index = rom_offset / 0x8000;
+        u16 zbytek = rom_offset % 0x8000;
+        ctx.rom_bank_x = ctx.rom_data_pool[rom_pool_index] + zbytek;        
+    }
+
+    if ((address & 0xE000) == 0x4000) {
+        //ram bank number
+        ctx.ram_bank_value = value & 0b11;
+
+        if (ctx.ram_banking) {
+            if (cart_need_save()) {
+                //cart_battery_save();
+            }
+
+            ctx.ram_bank = ctx.ram_banks[ctx.ram_bank_value];
+        }
+    }
+
+    if ((address & 0xE000) == 0x6000) {
+        //banking mode select
+        ctx.banking_mode = value & 1;
+
+        ctx.ram_banking = ctx.banking_mode;
+
+        if (ctx.ram_banking) {
+            if (cart_need_save()) {
+                //cart_battery_save();
+            }
+            
+            ctx.ram_bank = ctx.ram_banks[ctx.ram_bank_value];
+        }
+    }
+
+    if ((address & 0xE000) == 0xA000) {
+        if (!ctx.ram_enabled) {
+            return;
+        }
+
+        if (!ctx.ram_bank) {
+            return;
+        }
+
+        ctx.ram_bank[address - 0xA000] = value;
+
+        if (ctx.battery) {
+            ctx.need_save = true;
+        }
+    }
 }

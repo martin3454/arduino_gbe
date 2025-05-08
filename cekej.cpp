@@ -1,4 +1,4 @@
-#include "cekej.h"
+/*#include "cekej.h"
 
 
 
@@ -8,4 +8,4 @@ void myDelay(uint16_t delayMs) {
 
 TickType_t get_tick(){
   return xTaskGetTickCount();
-}
+}*/

@@ -20,6 +20,14 @@ typedef struct {
     u16 global_checksum;
 } rom_header;
 
-bool cart_load(const char *cart, uint8_t *rom_buff, int n_bytes);
+
+
+u8* get_rom_data(uint8_t i);
+
+int8_t cart_load(const char *cart, char* buff);
 u8 cart_read(u16 address);
 void cart_write(u16 address, u8 value);
+
+bool cart_need_save();
+void cart_battery_load();
+void cart_battery_save();

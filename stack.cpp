@@ -84,14 +84,14 @@
     0xDFFF: 00
 */
 
-void stack_push(u8 data) {
+void stack_push(u8 _data) {
     cpu_get_regs()->sp--;
-    bus_write(cpu_get_regs()->sp, data);
+    bus_write(cpu_get_regs()->sp, _data);
 }
 
-void stack_push16(u16 data) {
-    stack_push((data >> 8) & 0xFF);
-    stack_push(data & 0xFF);
+void stack_push16(u16 _data) {
+    stack_push((_data >> 8) & 0xFF);
+    stack_push(_data & 0xFF);
 }
 
 u8 stack_pop() {
