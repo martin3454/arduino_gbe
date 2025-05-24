@@ -6,8 +6,8 @@
 typedef struct {
     char filename[1024];
     u32 rom_size;
-    u8 *rom_data;
-    u8 *rom_data_pool[10];        //
+    //u8 *rom_data;
+    u8 *rom_data_pool[10];     
     rom_header *header;
 
     //mbc1 related data
@@ -30,9 +30,11 @@ typedef struct {
 
 static cart_context ctx;
 
+/*
 u8* get_rom_data(uint8_t i){
   return ctx.rom_data_pool[i];
 }
+*/
 
 bool cart_need_save() {
     return ctx.need_save;
@@ -296,14 +298,14 @@ int8_t cart_load(const char *cart, char* buff) {
       return 0;
     }
 
-    File rom_file = LittleFS.open("/Alien3.gb");
+    File rom_file = LittleFS.open("/Contra.gb");
     
     if(!rom_file){   
       return -1;
     }
 
     uint32_t velikost_rom = rom_file.size();
-    uint8_t n = velikost_rom / 0x8000;      //
+    uint8_t n = velikost_rom / 0x8000;      
     if(n > 9) return -2;
     
     uint8_t zbytek = velikost_rom % 0x8000;
@@ -440,7 +442,7 @@ void cart_write(u16 address, u8 value) {
 
         if (ctx.ram_banking) {
             if (cart_need_save()) {
-                //cart_battery_save();
+                cart_battery_save();
             }
 
             ctx.ram_bank = ctx.ram_banks[ctx.ram_bank_value];
@@ -455,7 +457,7 @@ void cart_write(u16 address, u8 value) {
 
         if (ctx.ram_banking) {
             if (cart_need_save()) {
-                //cart_battery_save();
+                cart_battery_save();
             }
             
             ctx.ram_bank = ctx.ram_banks[ctx.ram_bank_value];

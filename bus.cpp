@@ -21,8 +21,96 @@
 // 0xFF00 - 0xFF7F : I/O Registers
 // 0xFF80 - 0xFFFE : Zero Page
 
+typedef uint8_t (*ReadHandler)(uint16_t address);
+typedef void (*WriteHandler)(uint16_t address, uint8_t value);
+
+static ReadHandler read_map[16];
+static WriteHandler write_map[16];
+
+
+void bus_init(){
+  for(u8 i = 0; i < 16; i++){
+    read_map[i] = read_unmapped;
+    write_map[i] = write_unmapped;
+  }
+  read_map[0x00] = read_map[0x01] = read_map[0x02] = read_map[0x03] = read_map[0x04] = read_map[0x05] = read_map[0x06] = read_map[0x07] =  cart_read;
+  read_map[0x08] = read_map[0x09] = ppu_vram_read;
+  read_map[0x0A] = read_map[0x0B] = cart_read;
+  read_map[0x0C] = read_map[0x0D] = wram_read;
+  read_map[0x0F] = bus_read_region_F; 
+
+  write_map[0x00] = write_map[0x01] = write_map[0x02] = write_map[0x03] = write_map[0x04] = write_map[0x05] = write_map[0x06] = write_map[0x07] =  cart_write;
+  write_map[0x08] = write_map[0x09] = ppu_vram_write;
+  write_map[0x0A] = write_map[0x0B] = cart_write;
+  write_map[0x0C] = write_map[0x0D] = wram_write;
+  write_map[0x0F] = bus_write_region_F; 
+    
+}
+
+
+// Default unmapped read/write
+u8 read_unmapped(u16 addr) {
+    return 0;
+}
+
+void write_unmapped(u16 addr, u8 val) {
+    // No-op
+}
+
+u8 bus_read_region_F(u16 address){
+    
+    if (address < 0xFE00) {
+        //reserved echo ram...
+        return 0;
+    } else if (address < 0xFEA0) {
+        //OAM
+        if (dma_transferring()) {
+            return 0xFF;
+        }
+
+        return ppu_oam_read(address);
+    } else if (address < 0xFF00) {
+        //reserved unusable...
+        return 0;
+    } else if (address < 0xFF80) {
+        //IO Registers...
+        return io_read(address);
+    } else if (address == 0xFFFF) {
+        //CPU ENABLE REGISTER...
+        return cpu_get_ie_register();
+    }
+    
+    return hram_read(address);
+}
+void bus_write_region_F(u16 address, u8 value){
+    
+    if (address < 0xFE00) {
+        //reserved echo ram
+    } else if (address < 0xFEA0) {
+        //OAM
+        if (dma_transferring()) {
+            return;
+        }
+        
+        ppu_oam_write(address, value);
+    } else if (address < 0xFF00) {
+        //unusable reserved
+    } else if (address < 0xFF80) {
+        //IO Registers...
+        io_write(address, value);
+    } else if (address == 0xFFFF) {
+        //CPU SET ENABLE REGISTER
+        
+        cpu_set_ie_register(value);
+    } else {
+        hram_write(address, value);
+    }
+}
+
+
 u8 bus_read(u16 address) {
-    if (address < 0x8000) {
+    return read_map[address >> 12](address);
+    /*if (address < 0x8000) {
         //ROM Data
         return cart_read(address);
     } else if (address < 0xA000) {
@@ -56,11 +144,12 @@ u8 bus_read(u16 address) {
     }
 
     //NO_IMPL
-    return hram_read(address);
+    return hram_read(address);*/
 }
 
 void bus_write(u16 address, u8 value) {
-    if (address < 0x8000) {
+    write_map[address >> 12](address, value);
+    /*if (address < 0x8000) {
         //ROM Data
         cart_write(address, value);
     } else if (address < 0xA000) {
@@ -92,7 +181,7 @@ void bus_write(u16 address, u8 value) {
         cpu_set_ie_register(value);
     } else {
         hram_write(address, value);
-    }
+    }*/
 }
 
 u16 bus_read16(u16 address) {

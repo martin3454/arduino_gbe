@@ -204,7 +204,27 @@ void pipeline_load_window_tile() {
     }
 }
 
+
+void pipeline_push_pixel() {
+    if (ppu_get_context()->pfc.pixel_fifo._size > 8) {
+        u16 pixel_data = pixel_fifo_pop();
+
+        if (ppu_get_context()->pfc.line_x >= (lcd_get_context()->scroll_x % 8)) {
+            ppu_get_context()->video_buffer[ppu_get_context()->pfc.pushed_x + 
+                (lcd_get_context()->ly * XRES)] = pixel_data;
+            
+            ppu_get_context()->pfc.pushed_x++;
+        }
+
+        ppu_get_context()->pfc.line_x++;
+    }
+}
+
+
 void pipeline_fetch() {
+    
+    while(ppu_get_context()->pfc.pushed_x < XRES){
+      ppu_get_context()->pfc.map_x = (ppu_get_context()->pfc.fetch_x + lcd_get_context()->scroll_x);
     switch(ppu_get_context()->pfc.cur_fetch_state) {
         case FS_TILE: {
             ppu_get_context()->fetched_entry_count = 0;
@@ -257,26 +277,15 @@ void pipeline_fetch() {
             if (pipeline_fifo_add()) {
                 ppu_get_context()->pfc.cur_fetch_state = FS_TILE;
             }
+            pipeline_push_pixel();
 
         } break;
 
     }
-}
-
-void pipeline_push_pixel() {
-    if (ppu_get_context()->pfc.pixel_fifo._size > 8) {
-        u16 pixel_data = pixel_fifo_pop();
-
-        if (ppu_get_context()->pfc.line_x >= (lcd_get_context()->scroll_x % 8)) {
-            ppu_get_context()->video_buffer[ppu_get_context()->pfc.pushed_x + 
-                (lcd_get_context()->ly * XRES)] = pixel_data;
-            
-            ppu_get_context()->pfc.pushed_x++;
-        }
-
-        ppu_get_context()->pfc.line_x++;
     }
 }
+
+
 
 void pipeline_process() {
     ppu_get_context()->pfc.map_y = (lcd_get_context()->ly + lcd_get_context()->scroll_y);
@@ -286,8 +295,7 @@ void pipeline_process() {
     if (!(ppu_get_context()->line_ticks & 1)) {
         pipeline_fetch();
     }
-
-    pipeline_push_pixel();
+    //pipeline_push_pixel();
 }
 
 /*

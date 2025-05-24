@@ -107,7 +107,7 @@ void setup() {
 //************************************************************
   const char *files[] = {
         "rezerva",
-        "Alien3.gb"
+        "Contra.gb"
   };
 
   char buff[10];
@@ -118,19 +118,15 @@ void setup() {
 
   ui_init();
   timer_init();
+  //bus_init();
   cpu_init();
   ppu_init();
  
-
-  
-  
   cpu_run();
 
   //queue_h = xQueueCreate(10, sizeof(uint8_t));
   //xTaskCreate(cpu_run,"cpu_run",2048,NULL ,1, NULL);
   //xTaskCreate(emu_cycles,"emu_cycles",2048,NULL ,8, NULL);    
-  
-  
 }
 
 void loop() {

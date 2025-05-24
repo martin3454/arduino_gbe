@@ -22,7 +22,7 @@ typedef struct {
 
 
 
-u8* get_rom_data(uint8_t i);
+//u8* get_rom_data(uint8_t i);
 
 int8_t cart_load(const char *cart, char* buff);
 u8 cart_read(u16 address);

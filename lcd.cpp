@@ -4,7 +4,7 @@
 
 static lcd_context ctx;
 
-static uint16_t colors_default[4] = {0xFFFF, 0xD69A, 0x7BEF, 0x0000}; 
+static uint16_t colors_default[4] = {0xFFFF, 0xD69A, 0x7BEF, 0x0000}; //{0xFFFF, 0xD69A, 0x7BEF, 0x0000}; 
 
 void lcd_init() {
     ctx.lcdc = 0x91;

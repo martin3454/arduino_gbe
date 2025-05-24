@@ -17,6 +17,8 @@ cpu_context* cpu_get_context(){
 }
 
 void cpu_init() {
+
+    bus_init();
     ctx.regs.pc = 0x100;
     ctx.regs.sp = 0xFFFE;
     *((short *)&ctx.regs.a) = 0xB001;
