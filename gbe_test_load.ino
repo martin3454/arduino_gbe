@@ -107,13 +107,12 @@ void setup() {
 //************************************************************
   const char *files[] = {
         "rezerva",
-        "Contra.gb"
+        "Super Mario Land.gb"
   };
 
   char buff[10];
   
   Serial.println(cart_load(files[1], buff));
-  
   Serial.println(buff);
 
   ui_init();
@@ -121,7 +120,6 @@ void setup() {
   //bus_init();
   cpu_init();
   ppu_init();
- 
   cpu_run();
 
   //queue_h = xQueueCreate(10, sizeof(uint8_t));
@@ -150,20 +148,23 @@ void button_check(){
 }
 
 
+//NOT USED
 int emu_run(int argc, const char **argv) {
-    if (argc < 2) {
+    /*
+     * if (argc < 2) {
         //printf("Usage: emu <rom_file>\n");
         return -1;
     }
-    /*if (!cart_load(argv[1])) {
+    if (!cart_load(argv[1])) {
         //printf("Failed to load ROM file: %s\n", argv[1]);
         return -2;
-    }*/
+    }
 
-    //ui_init();
-    //cpu_run(NULL);
+    ui_init();
+    cpu_run(NULL);
 
     return 0;
+    */
 }
 
 void emu_cycles(uint8_t cpu_cycles) {    
