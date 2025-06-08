@@ -277,10 +277,11 @@ void pipeline_fetch() {
           if (pipeline_fifo_add()) {
             ppu_get_context()->pfc.cur_fetch_state = FS_TILE;
           }
-          pipeline_push_pixel();
+          //pipeline_push_pixel();
 
         } break;
     }
+    pipeline_push_pixel();
   }
 }
 

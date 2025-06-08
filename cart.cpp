@@ -298,7 +298,7 @@ int8_t cart_load(const char *cart, char* buff) {
       return 0;
     }
 
-    File rom_file = LittleFS.open("/Super Mario Land.gb");
+    File rom_file = LittleFS.open("/Contra.gb");
     
     if(!rom_file){   
       return -1;

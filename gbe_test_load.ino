@@ -46,7 +46,7 @@ emu_context *emu_get_context() {
     return &ctx;
 }
 
-uint32_t cas1, cas2;
+//uint32_t cas1, cas2;
 
 void cpu_run() {
           
@@ -56,25 +56,33 @@ void cpu_run() {
     ctx._running = true;
     ctx.paused = false;
     ctx.ticks = 0;
-
+    
+    
     while(ctx._running) {
+        //cas2 = millis();
         if (ctx.paused) {
             delay(100);
             continue;
         }
         if(cpu_step(debug_vypis)) {
-          //Serial.println(lcd_get_context()->ly);          
+          
         }else break;
 
        if(frame != ppu_get_context()->current_frame){
-          cas2 = millis();
-          uint32_t dif = cas2 - cas1;
-          Serial.println(dif);
-          cas1 = cas2;
+          button_check();
+          //cas2 = millis();
+          //uint32_t dif = cas2 - cas1;
+          //Serial.println(dif);
+          //cas1 = cas2; 
+          button_check();         
           ui_update(tiles_data);
           frame = ppu_get_context()->current_frame;      
-       } 
-       button_check();          
+       }
+       
+       /*if(cas1 + 800 < cas2){
+          cas1 = cas2;
+          button_check();
+       }*/         
     }    
 }
  
@@ -83,7 +91,7 @@ void cpu_run() {
 void setup() {
   
   Serial.begin(115200);
-  cas1 = cas2 = 0;
+  //cas1 = cas2 = 0;
   
   /*if(!LittleFS.begin()){
     Serial.println("An Error has occurred while mounting SPIFFS");
@@ -107,7 +115,7 @@ void setup() {
 //************************************************************
   const char *files[] = {
         "rezerva",
-        "Super Mario Land.gb"
+        "Contra.gb"
   };
 
   char buff[10];
@@ -162,9 +170,10 @@ int emu_run(int argc, const char **argv) {
 
     ui_init();
     cpu_run(NULL);
-
+*/
     return 0;
-    */
+    
+    
 }
 
 void emu_cycles(uint8_t cpu_cycles) {    

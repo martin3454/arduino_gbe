@@ -98,7 +98,7 @@ void ui_update(char *buf) {
    tft.pushImage(0, 0, 160, 144, video_buffer);
    //tft.pushImage(0, 0, 10, 10, pole);
    //memset(pole, ppu_get_context()->pfc.line_x, 100 * sizeof(u16));   
-   update_dbg_window(buf);  
+   //update_dbg_window(buf);  
 }
 
 void ui_on_key(bool down, char key) {
